@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="jquery.min.js"></script>
+    <link href="src/bootstrap-dark.min.css" rel="stylesheet">
+    <script src="src/jquery.min.js"></script>
+    <script src="src/bootstrap.min.js"></script>
+
+    <script type="text/javascript">
+        var ws = new WebSocket('wss://api.bitfinex.com/ws/2');
+
+        // coin type
+        var pairs = ["BTCUSD", "ETHUSD", "XRPUSD", "EOSUSD", "OMGUSD", "BCHUSD", "LTCUSD", "IOTUSD", "NEOUSD", "ETCUSD", "XMRUSD", "DSHUSD", "BTGUSD", "QTMUSD"];
+        var pairs = ["BTCUSD", "ETHUSD", "XRPUSD", "EOSUSD", "LTCUSD", "IOTUSD", "ETCUSD"];
+        // channel id
+        var chanIds = [];
+        // rowContain must be 1,2,3,4,6,12
+        var rowContain = 4;
+
+        ws.onopen = function () {
+            pairs.forEach(function (item, key) {
+                //Initial 
+                if (key % rowContain == 0) $("#accordion").append("<div id='row" + Math.floor(key / rowContain) + "' class='row'></div>");
+                $("#row" + Math.floor(key / rowContain)).append("<div id='" + item + "' class='col-md-" + (12 / rowContain) + "'></div>");
+                // bootstrap v3
+                // var dataBlockHtml = "<div class='panel panel-default'>" ;
+                // dataBlockHtml += "<div class='panel-heading' role='tab' id='heading" + key + "'>";
+                // dataBlockHtml += "<h4 class='panel-title'>";
+                // dataBlockHtml += "<a role='button' data-toggle='collapse' data-parent='#accordion' href='#collapse" + key + "' aria-expanded='true' aria-controls='collapse" + key + "'>";
+                // dataBlockHtml += item ;
+                // dataBlockHtml += "</a>";
+                // dataBlockHtml += "</h4>";
+                // dataBlockHtml += "</div>";
+                // dataBlockHtml += "<div id='collapse" + key + "' class='panel-collapse collapse in' role='tabpanel' aria-labelledby='heading" + key + "'>";
+                // dataBlockHtml += "<div class='panel-body' id='pb-" + item + "'></div>" ;
+                // dataBlockHtml += "</div>";
+                // dataBlockHtml += "</div>";
+
+                // bootstrap v4
+                var dataBlockHtml = "<div class='card'>";
+                dataBlockHtml += "<div class='card-header' role='tab' id='heading'" + key + "'>";
+                dataBlockHtml += "<h5 class='mb-0'>";
+                dataBlockHtml += "<a data-toggle='collapse' data-parent='#accordion' href='#collapse" + key + "' aria-expanded='true' aria-controls='collapse" + key + "'> #";
+                dataBlockHtml += item.substring(0, item.length - 3);
+                dataBlockHtml += "</a>";
+                dataBlockHtml += "</h5>";
+                dataBlockHtml += "</div>";
+                dataBlockHtml += "<div id='collapse" + key + "' class='collapse show' role='tabpanel' aria-labelledby='heading" + key + "'>";
+                dataBlockHtml += "<div class='card-block' id='pb-" + item + "'></div>";
+                dataBlockHtml += "</div>";
+                dataBlockHtml += "</div>";
+                $("#" + item).append(dataBlockHtml);
+
+                //send websocket request ....
+                ws.send(JSON.stringify({"event": "subscribe", "channel": "ticker", "pair": item}));
+            });
+        };
+        ws.onmessage = function (msg) {
+            var data = JSON.parse(msg.data);
+            if (data[1] === 'hb') return;
+            if (data.event == 'info') return;
+            if (data.event == 'subscribed') {
+                chanIds[data.chanId] = data.pair;
+                return;
+            }
+            console.log('New message: ', data);
+            // $("body").prepend(chanIds[data[0]] + " " + data[1] + "<br>");
+
+            var dataContainer = $("#pb-" + chanIds[data[0]]);
+
+            dataContainer.html("");
+
+            data[1].forEach(function (value, key) {
+                switch (key) {
+                    case 0: //上次最高出價的價格
+                        // dataContainer.append("BID：" + value + "<br>");
+                        dataContainer.append("上次最高出價的價格：" + value + "<br>");
+                        break;
+                    case 1: //最高出價的大小
+                        // dataContainer.append("BID_SIZE：" + value + "<br>");
+                        dataContainer.append("最高出價的大小：" + value + "<br>");
+                        break;
+                    case 2: //價格最後的最低要求
+                        // dataContainer.append("ASK：" + value + "<br>");
+                        dataContainer.append("價格最後的最低要求：" + value + "<br>");
+                        break;
+                    case 3: //最後一個最低詢問的大小
+                        // dataContainer.append("ASK_SIZE：" + value + "<br>");
+                        dataContainer.append("最後一個最低詢問的大小：" + value + "<br>");
+                        break;
+                    case 4: //自昨天以來最近一次價格變動的金額
+                        // dataContainer.append("DAILY_CHANGE：" + value + "<br>");
+                        dataContainer.append("自昨天以來最近一次價格變動的金額：" + value + "<br>");
+                        break;
+                    case 5: //價格變化的金額以百分比表示
+                        // dataContainer.append("DAILY_CHANGE_PERC：" + value + "<br>");
+                        dataContainer.append("價格變化的金額以百分比表示：" + value + "<br>");
+                        break;
+                    case 6: //最後一筆交易的價格
+                        // dataContainer.append("LAST_PRICE：" + value + "<br>");
+                        dataContainer.append("最後一筆交易的價格：" + value + "<br>");
+                        break;
+                    case 7: //每日成交量
+                        // dataContainer.append("VOLUME：" + value + "<br>");
+                        dataContainer.append("每日成交量：" + value + "<br>");
+                        break;
+                    case 8: //每日高點
+                        // dataContainer.append("HIGH：" + value + "<br>");
+                        dataContainer.append("每日高點：" + value + "<br>");
+                        break;
+                    case 9: //每日低點
+                        // dataContainer.append("LOW：" + value + "<br>");
+                        dataContainer.append("每日低點：" + value + "<br>");
+                        break;
+                }
+            });
+
+        };
+    </script>
+    <style>
+        .col-md-3 {
+            padding: 15px;
+        }
+
+        .card-block {
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body style="padding: 15px;">
+<h1> U S D </h1>
+<div id="accordion" role="tablist" aria-multiselectable="true">
+</div>
+</body>
+</html>
